@@ -40,7 +40,10 @@ class GeofenceViewModel: ObservableObject{
                 self.lastEventText = text
                 
                 if text != "No events yet" {
-                    self.events.insert(GeofenceModel(message:text),at: 0)
+                    self.events.insert(
+                        GeofenceModel(date: Date(), message: text),
+                        at: 0
+                    )
                 }
                 
             }.store(in: &cancellables)
@@ -68,4 +71,14 @@ class GeofenceViewModel: ObservableObject{
      }
     
     
+
+func StartGeofence(){
+    let center = CLLocationCoordinate2D(latitude: 32.708333, longitude: -117.154722)
+    
+        service.startGeofence(
+        center: center,
+        radius: 200,
+        id: "Home"
+    )
+}
 }

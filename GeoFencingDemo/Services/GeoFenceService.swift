@@ -7,79 +7,75 @@
 
 import Foundation
 import CoreLocation
+import Combine
 
-class GeofenceService: NSObject,ObservableObject, CLLocationManagerDelegate {
+
+class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelegate {
+    
+    private let manager = CLLocationManager()
     
     @Published var statusText: String = "Not started"
     @Published var lastEventText: String = "No events yet"
-    
-    private let manager = CLLocationManager()
     
     override init() {
         super.init()
         manager.delegate = self
     }
-        
     
-    func requestPermissions(){
+    // MARK: - Permissions
+    func requestPermissions() {
         manager.requestAlwaysAuthorization()
     }
     
+    // MARK: - Start / Stop
     
-    func startGeofence(center: CLLocationCoordinate2D,radius:CLLocationDistance,id:String){
-        guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else {
-            statusText = "Geofence not available on this device"
-            return
-        }
+    func startGeofence(center: CLLocationCoordinate2D, radius: CLLocationDistance, id: String) {
         
         let region = CLCircularRegion(center: center, radius: radius, identifier: id)
-        
         region.notifyOnEntry = true
         region.notifyOnExit = true
         
         manager.startMonitoring(for: region)
-        statusText = "Monitoring : \(id)"
-        
+        statusText = "Monitoring started"
     }
     
-    func stopGeofence(id:String){
-        for region in manager.monitoredRegions{
+    func stopGeofence(id: String) {
+        for region in manager.monitoredRegions {
             if region.identifier == id {
-                manager.stopMonitoring(for:region)
+                manager.stopMonitoring(for: region)
             }
         }
+        statusText = "Monitoring stopped"
     }
     
-    func locationManager(_ manager: CLLocationManager, didStartMonitoringFor region: CLRegion) {
-        lastEventText = "Did start monitoring: \(region.identifier)"
-    }
+    // MARK: - Delegate Events
     
     func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
-        lastEventText = "🚪 Entered: \(region.identifier)"
-
+        DispatchQueue.main.async {
+            self.lastEventText = "Entered zone (\(region.identifier))"
+        }
     }
     
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
-           lastEventText = "🚪 Exited: \(region.identifier)"
-       }
-
-       func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-           lastEventText = "❌ Error: \(error.localizedDescription)"
-       }
-
+        DispatchQueue.main.async {
+            self.lastEventText = "Exited zone (\(region.identifier))"
+        }
+    }
+    
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         switch manager.authorizationStatus {
-             case .notDetermined: statusText = "Permission: not determined"
-             case .restricted: statusText = "Permission: restricted"
-             case .denied: statusText = "Permission: denied"
-             case .authorizedWhenInUse: statusText = "Permission: when in use"
-             case .authorizedAlways: statusText = "Permission: always "
-             @unknown default: statusText = "Permission: unknown"
-            }
+        case .authorizedAlways:
+            statusText = "Authorized Always ✅"
+        case .authorizedWhenInUse:
+            statusText = "Authorized When In Use ⚠️"
+        case .denied:
+            statusText = "Permission Denied ❌"
+        case .restricted:
+            statusText = "Restricted ❌"
+        case .notDetermined:
+            statusText = "Not Determined"
+        @unknown default:
+            statusText = "Unknown"
         }
-    
-    
-    
-    
-    
+    }
 }
